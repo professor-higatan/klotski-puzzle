@@ -1,0 +1,157 @@
+{
+  "$schema": "https://example.com/klotski.schema.json",
+  "meta": {
+    "name": "Klotski (華容道) - 横刀立馬",
+    "name_ja": "華容道（よこどうりつば／Hengdaolima 配置）",
+    "description": "4列×5行の盤面で、3色のコマをスライドさせ、赤の2×2の駒を盤面下部中央（出口）へ運べばクリア。",
+    "description_en": "Sliding-block puzzle on a 4x5 board. Slide pieces to move the red 2x2 block to the bottom-center exit.",
+    "author": "Generated for Hidetada HIGASHI",
+    "version": "1.0.0"
+  },
+  "board": {
+    "cols": 4,
+    "rows": 5,
+    "cell_size_px": 96,
+    "gap_px": 4,
+    "background": "#1a1a1a",
+    "frame": "#0d0d0d",
+    "exit": {
+      "description": "赤2×2の駒の左上が (col:1, row:3) に到達したらクリア",
+      "target_piece_id": "red_boss",
+      "target_position": { "col": 1, "row": 3 }
+    }
+  },
+  "colors": {
+    "red":    { "fill": "#E63946", "stroke": "#9B1C2A", "label_text": "#FFF" },
+    "blue":   { "fill": "#1D6FB8", "stroke": "#0E3E6C", "label_text": "#FFF" },
+    "yellow": { "fill": "#F4C430", "stroke": "#B8902A", "label_text": "#333" },
+    "empty":  { "fill": "#2b2b2b", "stroke": "#1a1a1a" }
+  },
+  "pieces": [
+    {
+      "id": "red_boss",
+      "type": "2x2",
+      "color": "red",
+      "label": "★",
+      "width": 2,
+      "height": 2,
+      "position": { "col": 1, "row": 0 },
+      "movable": true,
+      "is_goal_piece": true
+    },
+    {
+      "id": "blue_v1",
+      "type": "1x2_vertical",
+      "color": "blue",
+      "width": 1,
+      "height": 2,
+      "position": { "col": 0, "row": 0 },
+      "movable": true
+    },
+    {
+      "id": "blue_v2",
+      "type": "1x2_vertical",
+      "color": "blue",
+      "width": 1,
+      "height": 2,
+      "position": { "col": 0, "row": 2 },
+      "movable": true
+    },
+    {
+      "id": "blue_v3",
+      "type": "1x2_vertical",
+      "color": "blue",
+      "width": 1,
+      "height": 2,
+      "position": { "col": 3, "row": 0 },
+      "movable": true
+    },
+    {
+      "id": "blue_v4",
+      "type": "1x2_vertical",
+      "color": "blue",
+      "width": 1,
+      "height": 2,
+      "position": { "col": 3, "row": 2 },
+      "movable": true
+    },
+    {
+      "id": "blue_h1",
+      "type": "2x1_horizontal",
+      "color": "blue",
+      "width": 2,
+      "height": 1,
+      "position": { "col": 1, "row": 2 },
+      "movable": true
+    },
+    {
+      "id": "yellow_1",
+      "type": "1x1",
+      "color": "yellow",
+      "width": 1,
+      "height": 1,
+      "position": { "col": 1, "row": 3 },
+      "movable": true
+    },
+    {
+      "id": "yellow_2",
+      "type": "1x1",
+      "color": "yellow",
+      "width": 1,
+      "height": 1,
+      "position": { "col": 2, "row": 3 },
+      "movable": true
+    },
+    {
+      "id": "yellow_3",
+      "type": "1x1",
+      "color": "yellow",
+      "width": 1,
+      "height": 1,
+      "position": { "col": 0, "row": 4 },
+      "movable": true
+    },
+    {
+      "id": "yellow_4",
+      "type": "1x1",
+      "color": "yellow",
+      "width": 1,
+      "height": 1,
+      "position": { "col": 3, "row": 4 },
+      "movable": true
+    }
+  ],
+  "empty_cells": [
+    { "col": 1, "row": 4 },
+    { "col": 2, "row": 4 }
+  ],
+  "rules": {
+    "move": "コマは空きマスへ縦横にスライドできる。斜め移動不可。",
+    "rotation": "回転は不可。",
+    "overlap": "他のコマや盤面外と重なる移動は不可。",
+    "win_condition": "赤2×2の左上が (col:1, row:3) に来た時点でクリア。",
+    "optimal_solution_moves": 81,
+    "notes": "横刀立馬配置の最短手数は81手（1手＝1コマを1マス動かす定義）として知られている。"
+  },
+  "ui_hints": {
+    "drag_to_move": true,
+    "click_to_select_then_arrow_keys": true,
+    "highlight_goal_piece": true,
+    "show_move_counter": true,
+    "show_timer": true,
+    "reset_button": true,
+    "undo_button": true,
+    "celebrate_on_win": "赤の駒が出口に到達したらクラッカー演出 + 手数を表示"
+  },
+  "validation": {
+    "total_cells": 20,
+    "occupied_cells": 18,
+    "empty_cells_count": 2,
+    "piece_count": {
+      "2x2": 1,
+      "1x2_vertical": 4,
+      "2x1_horizontal": 1,
+      "1x1": 4
+    }
+  }
+}

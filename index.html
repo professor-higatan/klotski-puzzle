@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1a1a">
+  <title>華容道パズル</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <h1 class="title">華容道</h1>
+      <p class="subtitle">★を下の出口まで運ぼう！</p>
+    </header>
+
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">手数</span>
+        <span id="move-count" class="stat-value">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">時間</span>
+        <span id="timer" class="stat-value">0:00</span>
+      </div>
+    </div>
+
+    <div class="board-wrapper">
+      <div id="board" class="board" role="grid" aria-label="華容道の盤面"></div>
+    </div>
+
+    <div id="direction-pad" class="direction-pad hidden">
+      <button class="dir-btn dir-up" data-dir="up" aria-label="上">▲</button>
+      <div class="dir-row">
+        <button class="dir-btn dir-left" data-dir="left" aria-label="左">◀</button>
+        <button class="dir-btn dir-down" data-dir="down" aria-label="下">▼</button>
+        <button class="dir-btn dir-right" data-dir="right" aria-label="右">▶</button>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="undo-btn" class="control-btn" disabled>↩ 戻す</button>
+      <button id="reset-btn" class="control-btn">🔄 最初から</button>
+    </div>
+
+    <p class="hint">コマをタップして、矢印で動かそう！</p>
+  </div>
+
+  <div id="win-overlay" class="overlay hidden">
+    <div class="win-card">
+      <div class="win-emoji">🎉</div>
+      <h2>クリア！</h2>
+      <p id="win-stats"></p>
+      <button id="play-again-btn" class="control-btn primary">もう一度</button>
+    </div>
+  </div>
+
+  <canvas id="confetti-canvas"></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
