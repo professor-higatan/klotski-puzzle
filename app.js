@@ -8,15 +8,17 @@
   let moveCount = 0;
   let timerInterval = null;
   let elapsedSeconds = 0;
-  let selectedPieceId = null;
   let won = false;
+  let activeDrag = null;
+
+  const SWIPE_THRESHOLD = 28;
+  const AXIS_LOCK = 10;
 
   const boardEl = document.getElementById('board');
   const moveCountEl = document.getElementById('move-count');
   const timerEl = document.getElementById('timer');
   const undoBtn = document.getElementById('undo-btn');
   const resetBtn = document.getElementById('reset-btn');
-  const directionPad = document.getElementById('direction-pad');
   const winOverlay = document.getElementById('win-overlay');
   const winStatsEl = document.getElementById('win-stats');
   const playAgainBtn = document.getElementById('play-again-btn');
@@ -48,11 +50,10 @@
     history = [];
     moveCount = 0;
     elapsedSeconds = 0;
-    selectedPieceId = null;
     won = false;
+    activeDrag = null;
     if (keepOverlay) winOverlay.classList.add('hidden');
     updateStats();
-    updateDirectionPad();
     undoBtn.disabled = true;
     if (timerInterval) clearInterval(timerInterval);
     startTimer();
@@ -125,12 +126,9 @@
     return false;
   }
 
-  function getMovableDirections(pieceId) {
-    const piece = pieces.find((p) => p.id === pieceId);
-    if (!piece) return [];
-    return Object.entries(DIRS)
-      .filter(([, { dc, dr }]) => canMove(piece, dc, dr))
-      .map(([name]) => name);
+  function directionFromDelta(dx, dy, axis) {
+    if (axis === 'x') return dx > 0 ? 'right' : 'left';
+    return dy > 0 ? 'down' : 'up';
   }
 
   function movePiece(pieceId, direction) {
@@ -156,9 +154,7 @@
     pieces = history.pop();
     moveCount = Math.max(0, moveCount - 1);
     undoBtn.disabled = history.length === 0;
-    selectedPieceId = null;
     updateStats();
-    updateDirectionPad();
     render();
   }
 
@@ -191,7 +187,23 @@
     return Math.floor((maxW - gap * (cols + 1)) / cols);
   }
 
+  function getStepSize() {
+    const gap = config.board.gap_px;
+    return getCellSize() + gap;
+  }
+
+  function clampDragOffset(piece, axis, delta) {
+    const step = getStepSize();
+    const sign = Math.sign(delta) || 1;
+    const dir = directionFromDelta(sign, sign, axis);
+    const movable = canMove(piece, DIRS[dir].dc, DIRS[dir].dr);
+    const max = movable ? step * 0.9 : step * 0.22;
+    return sign * Math.min(Math.abs(delta), max);
+  }
+
   function render() {
+    if (activeDrag) return;
+
     const gap = config.board.gap_px;
     const cellSize = getCellSize();
     const cols = config.board.cols;
@@ -234,75 +246,100 @@
       if (p.is_goal_piece && config.ui_hints.highlight_goal_piece) {
         el.classList.add('goal-piece');
       }
-      if (p.id === selectedPieceId) {
-        el.classList.add('selected');
-      }
 
       setupPieceInteraction(el, p.id);
       boardEl.appendChild(el);
     }
   }
 
-  function selectPiece(id) {
-    selectedPieceId = id;
-    updateDirectionPad();
-    render();
-  }
+  function endDrag(commit) {
+    if (!activeDrag) return;
 
-  function updateDirectionPad() {
-    if (!selectedPieceId) {
-      directionPad.classList.add('hidden');
-      return;
+    const { el, pieceId, axis, startX, startY, pointerId } = activeDrag;
+    const dx = activeDrag.lastX - startX;
+    const dy = activeDrag.lastY - startY;
+
+    el.classList.remove('dragging');
+    el.style.transform = '';
+
+    if (commit && axis) {
+      const delta = axis === 'x' ? dx : dy;
+      if (Math.abs(delta) >= SWIPE_THRESHOLD) {
+        const dir = directionFromDelta(dx, dy, axis);
+        if (movePiece(pieceId, dir)) {
+          activeDrag = null;
+          try { el.releasePointerCapture(pointerId); } catch (_) {}
+          return;
+        }
+      }
     }
-    directionPad.classList.remove('hidden');
-    const movable = getMovableDirections(selectedPieceId);
-    directionPad.querySelectorAll('.dir-btn').forEach((btn) => {
-      const dir = btn.dataset.dir;
-      btn.disabled = !movable.includes(dir);
+
+    el.classList.add('snap-back');
+    requestAnimationFrame(() => {
+      el.style.transform = 'translate(0, 0)';
+      setTimeout(() => {
+        el.classList.remove('snap-back');
+        el.style.transform = '';
+      }, 200);
     });
+
+    activeDrag = null;
+    try { el.releasePointerCapture(pointerId); } catch (_) {}
   }
 
   function setupPieceInteraction(el, pieceId) {
-    let startX, startY, moved;
-
     el.addEventListener('pointerdown', (e) => {
+      if (won || activeDrag) return;
       e.preventDefault();
-      startX = e.clientX;
-      startY = e.clientY;
-      moved = false;
-      selectPiece(pieceId);
+
+      activeDrag = {
+        pieceId,
+        el,
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        lastX: e.clientX,
+        lastY: e.clientY,
+        axis: null,
+      };
+
+      el.classList.add('dragging');
       el.setPointerCapture(e.pointerId);
     });
 
     el.addEventListener('pointermove', (e) => {
-      if (startX == null) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) moved = true;
+      if (!activeDrag || activeDrag.pieceId !== pieceId) return;
+
+      const dx = e.clientX - activeDrag.startX;
+      const dy = e.clientY - activeDrag.startY;
+      activeDrag.lastX = e.clientX;
+      activeDrag.lastY = e.clientY;
+
+      if (!activeDrag.axis && (Math.abs(dx) > AXIS_LOCK || Math.abs(dy) > AXIS_LOCK)) {
+        activeDrag.axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+      }
+
+      if (!activeDrag.axis) return;
+
+      const piece = pieces.find((p) => p.id === pieceId);
+      const offset = activeDrag.axis === 'x'
+        ? clampDragOffset(piece, 'x', dx)
+        : clampDragOffset(piece, 'y', dy);
+
+      const tx = activeDrag.axis === 'x' ? offset : 0;
+      const ty = activeDrag.axis === 'y' ? offset : 0;
+      el.style.transform = `translate(${tx}px, ${ty}px)`;
     });
 
     el.addEventListener('pointerup', (e) => {
-      if (startX == null) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      const threshold = 20;
+      if (!activeDrag || activeDrag.pieceId !== pieceId) return;
+      e.preventDefault();
+      endDrag(true);
+    });
 
-      if (moved && (Math.abs(dx) > threshold || Math.abs(dy) > threshold)) {
-        let dir;
-        if (Math.abs(dx) > Math.abs(dy)) {
-          dir = dx > 0 ? 'right' : 'left';
-        } else {
-          dir = dy > 0 ? 'down' : 'up';
-        }
-        if (movePiece(pieceId, dir)) {
-          selectedPieceId = pieceId;
-          updateDirectionPad();
-          render();
-        }
-      }
-
-      startX = startY = null;
-      try { el.releasePointerCapture(e.pointerId); } catch (_) {}
+    el.addEventListener('pointercancel', () => {
+      if (!activeDrag || activeDrag.pieceId !== pieceId) return;
+      endDrag(false);
     });
   }
 
@@ -310,29 +347,6 @@
     undoBtn.addEventListener('click', undo);
     resetBtn.addEventListener('click', () => resetGame());
     playAgainBtn.addEventListener('click', () => resetGame());
-
-    directionPad.querySelectorAll('.dir-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        if (selectedPieceId) {
-          movePiece(selectedPieceId, btn.dataset.dir);
-          updateDirectionPad();
-        }
-      });
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (!selectedPieceId) return;
-      const keyMap = {
-        ArrowUp: 'up', ArrowDown: 'down',
-        ArrowLeft: 'left', ArrowRight: 'right',
-      };
-      if (keyMap[e.key]) {
-        e.preventDefault();
-        movePiece(selectedPieceId, keyMap[e.key]);
-        updateDirectionPad();
-      }
-    });
-
     window.addEventListener('resize', render);
   }
 
